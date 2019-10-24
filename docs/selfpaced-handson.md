@@ -76,6 +76,14 @@ variable "storage_container_name_for_log" {
   default = "logs"
 }
 
+locals {
+  app_service_plan_name = join("", [var.prefix, "-plan"])
+  application_insights_name = join("", [var.prefix, "-insights"])
+  function_app_name = join("", [var.prefix, "-func"])
+  storage_account_name = random_string.func_storage_name.result
+  storage_account_for_log_name = join("", [substr(random_string.func_storage_name.result, 0, 20), "log"])
+}
+
 resource "random_string" "func_storage_name" {
   length  = 24
   upper   = false
@@ -88,7 +96,7 @@ resource "azurerm_resource_group" "main" {
 }
 
 resource "azurerm_storage_account" "func" {
-  name                      = random_string.func_storage_name.result
+  name                      = local.storage_account_name
   resource_group_name       = "${azurerm_resource_group.main.name}"
   location                  = "${azurerm_resource_group.main.location}"
   account_kind              = "StorageV2"
@@ -97,7 +105,7 @@ resource "azurerm_storage_account" "func" {
 }
 
 resource "azurerm_app_service_plan" "func" {
-  name                = join("", [var.prefix, "-plan"])
+  name                = local.app_service_plan_name
   resource_group_name = "${azurerm_resource_group.main.name}"
   location            = "${azurerm_resource_group.main.location}"
   kind                = "Linux"
@@ -110,14 +118,14 @@ resource "azurerm_app_service_plan" "func" {
 }
 
 resource "azurerm_application_insights" "func" {
-  name                = join("", [var.prefix, "-insights"])
+  name                = local.application_insights_name
   resource_group_name = "${azurerm_resource_group.main.name}"
   location            = "${azurerm_resource_group.main.location}"
   application_type    = "Node.JS"
 }
 
 resource "azurerm_function_app" "func" {
-  name                      = join("", [var.prefix, "-func"])
+  name                      = local.function_app_name
   resource_group_name       = "${azurerm_resource_group.main.name}"
   location                  = "${azurerm_resource_group.main.location}"
   app_service_plan_id       = "${azurerm_app_service_plan.func.id}"
@@ -138,7 +146,7 @@ resource "azurerm_function_app" "func" {
 }
 
 resource "azurerm_storage_account" "log" {
-  name                      = join("", [substr(random_string.func_storage_name.result, 0, 20), "log"])
+  name                      = local.storage_account_for_log_name
   resource_group_name       = "${azurerm_resource_group.main.name}"
   location                  = "${azurerm_resource_group.main.location}"
   account_kind              = "StorageV2"
